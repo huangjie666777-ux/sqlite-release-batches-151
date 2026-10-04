@@ -26,6 +26,7 @@ MIGRATION_TABLE = "__schema_migration_log__"
 class Settings:
     aliases: dict[str, Path]
     checkpoint_dir: Path
+    state_dir: Path
 
 
 def load_settings(path: str | os.PathLike[str] | None = None) -> Settings:
@@ -56,4 +57,22 @@ def load_settings(path: str | os.PathLike[str] | None = None) -> Settings:
             raise ValueError(
                 f"checkpoint_dir must not contain database files: {alias}"
             )
-    return Settings(aliases=aliases, checkpoint_dir=checkpoint_dir)
+    # 批次计划/执行/补偿记录同样保存在应用库之外，默认 <配置目录>/state。
+    raw_state_dir = os.environ.get("MIGRATION_STATE_DIR") or raw.get("state_dir")
+    if raw_state_dir:
+        state_dir = Path(raw_state_dir)
+        if not state_dir.is_absolute():
+            state_dir = cfg_path.parent / state_dir
+    else:
+        state_dir = cfg_path.parent / "state"
+    state_dir = state_dir.resolve()
+    for alias, db_path in aliases.items():
+        if db_path == state_dir or state_dir in db_path.parents:
+            raise ValueError(
+                f"state_dir must not contain database files: {alias}"
+            )
+    return Settings(
+        aliases=aliases,
+        checkpoint_dir=checkpoint_dir,
+        state_dir=state_dir,
+    )

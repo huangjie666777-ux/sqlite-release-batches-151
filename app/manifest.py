@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .config import MAX_SCRIPTS
 
 
 class MigrationItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     version: int = Field(ge=1)
     description: str
     sql: str
@@ -30,6 +32,8 @@ class MigrationItem(BaseModel):
 
 
 class MigrationManifest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     expected_version: int = Field(ge=0)
     scripts: list[MigrationItem]
 
